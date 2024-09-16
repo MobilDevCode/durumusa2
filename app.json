@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "app",
-    "slug": "app",
+    "name": "Deep 3D",
+    "slug": "deep3d",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -12,16 +12,58 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.deep3d.app",
+      "infoPlist": {
+        "NSBluetoothAlwaysUsageDescription": "We need your permission to use bluetooth",
+        "NSLocationWhenInUseUsageDescription": "We need access to your location for Bluetooth connectivity",
+        "NSPhotoLibraryUsageDescription": "We need access to your photo library to pick documents.",
+        "NSPhotoLibraryAddUsageDescription": "We need access to add files to your photo library.",
+        "NSDocumentsFolderUsageDescription": "We need access to your documents folder to read files."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "manifest": {
+        "application": {
+          "usesCleartextTraffic": true
+        }
+      },
+      "package": "com.deep3d.app",
+      "permissions": [
+        "BLUETOOTH",
+        "BLUETOOTH_ADMIN",
+        "ACCESS_FINE_LOCATION",
+        "BLUETOOTH_SCAN",
+        "BLUETOOTH_CONNECT",
+        "BLUETOOTH_ADVERTISE",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "androidNavigationBar": {
+      "backgroundColor": "#ffffff",
+      "barStyle": "dark-content"
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      [
+        "expo-asset",
+        {
+          "assets": [
+            "./vue.min.js",
+            "./plotly.min.js",
+            "surface.html",
+            "scanmode.html",
+            "gauge.html"
+          ]
+        }
+      ]
+    ]
   }
 }
