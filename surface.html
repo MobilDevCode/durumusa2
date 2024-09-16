@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="plotly.min.js"></script>
+    <style>
+      body,
+      html {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        width: 100%;
+      }
+      #plotly-3d-heatmap {
+        width: 100vw;
+        height: 100vh;
+      }
+      #colorbar-container {
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      #message {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 14;
+        width: 100%;
+        text-align: center;
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="plotly-3d-heatmap"></div>
+    <div id="message">Lütfen CSV Dosyası Seçiniz</div>
+
+    <script>
+      let xyz = []; // Başlangıçta boş
+
+      function normalizeZValues(data) {
+        const zValues = data.map((point) => point.z);
+        const zMin = Math.min(...zValues);
+        const zMax = Math.max(...zValues);
+
+        // Tüm z değerleri aynıysa normalizasyon yapma
+        if (zMin === zMax) {
+          return data;
+        }
+
+        return data.map((point) => ({
+          ...point,
+          z: ((point.z - zMin) / (zMax - zMin)) * 0.7,
+        }));
+      }
+
+      function render3DSurface(data) {
+        const messageElement = document.getElementById("message");
+        const plotlyElement = document.getElementById("plotly-3d-heatmap");
+
+        if (data.length === 0) {
+          messageElement.style.display = "block";
+          plotlyElement.style.display = "none";
+          return;
+        } else {
+          messageElement.style.display = "none";
+          plotlyElement.style.display = "block";
+        }
+
+        const normalizedData = normalizeZValues(data);
+
+        const xRange = Array.from(
+          new Set(normalizedData.map((point) => point.x))
+        ).sort((a, b) => a - b);
+        const yRange = Array.from(
+          new Set(normalizedData.map((point) => point.y))
+        ).sort((a, b) => a - b);
+
+        const x = [];
+        const y = [];
+        const z = [];
+
+        xRange.forEach((xVal) => {
+          x.push(xVal);
+          y.push(yRange.map((yVal) => yVal));
+          z.push(
+            yRange.map((yVal) => {
+              const point = normalizedData.find(
+                (p) => p.x === xVal && p.y === yVal
+              );
+              return point ? point.z : 0;
+            })
+          );
+        });
+
+        const trace = {
+          z: z,
+          x: x[0],
+          y: y.flat(),
+          type: "surface",
+          showscale: false,
+          colorscale: [
+            [0, "blue"],
+            [0.4, "aqua"],
+            [0.5, "darkgreen"],
+            [0.55, "green"],
+            [0.7, "limegreen"],
+            [0.8, "yellowgreen"],
+            [0.9, "orange"],
+            [1, "red"],
+          ],
+          contours: {
+            z: {
+              show: true,
+              highlightcolor: "red",
+              project: { z: true },
+            },
+          },
+        };
+
+        Plotly.react(
+          "plotly-3d-heatmap",
+          [trace],
+          {
+            scene: {
+              xaxis: { title: "X" },
+              yaxis: { title: "Y" },
+              zaxis: { title: "Z", range: [-5, 5] },
+              camera: {
+                eye: { x: 0, y: 0, z: 2.5 },
+              },
+            },
+            margin: { l: 10, r: 10, b: 0, t: 0 },
+          },
+          {
+            responsive: true,
+            displayModeBar: false,
+          }
+        );
+      }
+
+      // Initial render (will show the message if xyz is empty)
+      render3DSurface(xyz);
+
+      document.addEventListener("message", (event) => {
+        const data = JSON.parse(event.data);
+        if (data.values !== undefined) {
+          render3DSurface(data.values);
+        }
+      });
+
+      window.addEventListener("message", (event) => {
+        const data = JSON.parse(event.data);
+        if (data.values !== undefined) {
+          render3DSurface(data.values);
+        }
+      });
+    </script>
+  </body>
+</html>

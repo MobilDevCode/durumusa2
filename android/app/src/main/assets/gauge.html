@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="./plotly.min.js"></script>
+    <style>
+      body,
+      html {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        width: 100%;
+        overflow: hidden;
+      }
+      #plotly-gauge {
+        width: 100vw;
+        height: 100vh;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div id="plotly-gauge"></div>
+    </div>
+
+    <script>
+      var config = [
+        {
+          domain: { x: [0, 1], y: [0, 1] },
+          value: 0,
+          title: { text: "" },
+          type: "indicator",
+          mode: "gauge+number",
+          gauge: { axis: { range: [0, 1000] } },
+        },
+      ];
+
+      var layout = { width: window.innerWidth, height: window.innerHeight };
+      Plotly.newPlot("plotly-gauge", config, layout, {
+        responsive: true,
+        displayModeBar: false,
+      });
+
+      window.addEventListener("message", (event) => {
+        const data = JSON.parse(event.data);
+        if (data.gaugeValue !== undefined) {
+          updateGauge(data.gaugeValue);
+        }
+      });
+
+      document.addEventListener("message", (event) => {
+        const data = JSON.parse(event.data);
+        if (data.gaugeValue !== undefined) {
+          updateGauge(data.gaugeValue);
+        }
+      });
+
+      function updateGauge(newValue) {
+        Plotly.react(
+          "plotly-gauge",
+          [{ ...config[0], value: newValue }],
+          layout
+        );
+      }
+    </script>
+  </body>
+</html>
