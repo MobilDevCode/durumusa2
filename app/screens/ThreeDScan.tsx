@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Text, View, TouchableOpacity, Alert, Modal, TextInput } from "react-native";
 import WebView from "react-native-webview";
-import RNFS from "react-native-fs"
+import { Audio } from 'expo-av';  // Ses çalma kütüphanesi
 import { useBluetooth } from "../context/BluetoothContext";
-
+import RNFS from "react-native-fs"
 interface ThreeDScanProps {
   route: any;
   navigation: any;
@@ -24,6 +24,36 @@ export function ThreeDScan({ route, navigation }: ThreeDScanProps) {
   const [isZigzag, setIsZigzag] = useState<boolean>(route.params.zigzag);
   const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
   const [fileName, setFileName] = useState<string>("");
+
+  // Ses objesi için state
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
+
+  // Beep sesini çalmak için fonksiyon
+ 
+const playBeepSound = async () => {
+  const { sound } = await Audio.Sound.createAsync(
+    require('../../assets/beep.mp3')  // Ses dosyasının yolu
+  );
+  
+  // Sesi sadece belirli bir süre çalalım, örneğin 500 ms'den başlasın ve 1 saniye çalsın
+  setSound(sound);
+
+  // 500 milisaniyeden başla ve 1 saniye çal
+  await sound.playFromPositionAsync(500);  // Başlangıç pozisyonu (milisaniye cinsinden)
+  
+  // 1 saniye sonra durdurmak için timeout ayarlayalım
+  setTimeout(() => {
+    sound.stopAsync();
+  }, 100);  // 1 saniye (1000 milisaniye)
+};
+
+useEffect(() => {
+  return sound
+    ? () => {
+        sound.unloadAsync();  // Bileşen kapanınca sesi serbest bırak
+      }
+    : undefined;
+}, [sound]);
 
   const createData = (rows: number, cols: number) => {
     const step = 30;
@@ -49,8 +79,6 @@ export function ThreeDScan({ route, navigation }: ThreeDScanProps) {
 
     return `${year}-${month}-${day}_${hours}-${minutes}-${seconds}`;
   };
-
-  
 
   const saveToCSV = async () => {
     if (CSVData) {
@@ -84,7 +112,6 @@ export function ThreeDScan({ route, navigation }: ThreeDScanProps) {
     }
   };
 
-
   const getData: any = async () => {
     if (connectedDevice) {
       try {
@@ -99,6 +126,9 @@ export function ThreeDScan({ route, navigation }: ThreeDScanProps) {
   };
 
   const updateZValue = async () => {
+    // Ölçüm al butonuna tıklanınca beep sesi çal
+    await playBeepSound();
+
     if (CSVData && currentIndex < CSVData.length) {
       const newData = [...CSVData];
       if (isZigzag) {
