@@ -32,7 +32,16 @@
           title: { text: "" },
           type: "indicator",
           mode: "gauge+number",
-          gauge: { axis: { range: [0, 1000] } },
+          gauge: {
+            axis: { range: [0, 1000] },
+            bar: { color: "red" }, // İbrenin rengi burada ayarlandı
+            steps: [
+              { range: [0, 250], color: "lightgreen" },
+              { range: [250, 500], color: "yellow" },
+              { range: [500, 750], color: "orange" },
+              { range: [750, 1000], color: "red" }
+            ],
+          },
         },
       ];
 

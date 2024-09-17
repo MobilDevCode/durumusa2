@@ -3,10 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <script src="./plotly.min.js"></script>
+   <script src="plotly.min.js"></script>
     <style>
-      body,
-      html {
+      body, html {
         margin: 0;
         padding: 0;
         height: 100%;
@@ -14,151 +13,352 @@
       }
       #plotly-3d-heatmap {
         width: 100vw;
-        height: 100vh;
+        height: calc(100vh - 120px); /* Butonlar için üstte 120px yer ayırıyoruz */
+        position: relative;
+        top: 0;
+        left: 0;
+        
       }
-      #colorbar-container {
-        width: 100vw;
-        height: 100vh;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-      }
-      #message {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        font-size: 14;
+      .control-panel {
         width: 100%;
+        height: 120px; /* Butonlar için 120px yükseklik */
+        display: flex;
+        flex-direction: column; /* Üst üste hizalama */
+        align-items: center;
+        background-color: rgba(255, 255, 255, 0.9);
+        padding: 10px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+      }
+      .radio-buttons, .color-buttons {
+        display: flex;
+        gap: 15px;  /* Butonlar arasında boşluk */
+      }
+      .color-buttons {
+        margin-top: 15px;  /* Renk butonları ile radio butonları arasına boşluk bırakıyoruz */
+      }
+      .color-button {
+        padding: 5px 10px;
+        background-color: #000;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        cursor: pointer;
+        color: #ccc;
         text-align: center;
-        display: none;
+        transition: background-color 0.3s ease, transform 0.1s ease;
+      }
+      .color-button:hover {
+        background-color: #333;
+      }
+      .color-button:active {
+        transform: scale(0.95);
+        background-color: #555;
+      }
+      .radio-buttons label {
+        display: flex;
+        align-items: center;
+        gap: 5px;
       }
     </style>
   </head>
   <body>
     <div id="plotly-3d-heatmap"></div>
-    <div id="message">Lütfen CSV Dosyası Seçiniz</div>
+    
+    <div class="control-panel">
+     
+      <div class="color-buttons">
+        <div class="color-button" id="cButton">Derinlik</div>
+        <div class="color-button" id="zButton">Sinyal</div>
+      <button class="color-button" id="show2DButton">2D Görünüm Göster</button>
+
+      </div>
+      
+
+      
+      <!-- Renk Butonları -->
+      <div class="color-buttons">
+        <div class="color-button" onclick="changeColorScale('LuminousRainbow')">Luminous Rainbow</div>
+        <div class="color-button" onclick="changeColorScale('BrightRainbow')">Bright Rainbow</div>
+        <div class="color-button" onclick="changeColorScale('Electric')">Electric</div>
+        <div class="color-button" onclick="changeColorScale('Rainbow')">Rainbow</div>
+      </div>
+    
+      <!-- Yeni 2D Görünüm Butonu -->
+    </div>
 
     <script>
-      let xyz = []; // Başlangıçta boş
+      let data2;
+      let selectedDataType = 'z'; // Başlangıçta 'z' olarak ayarlıyoruz
+      let currentColorScale = 'Viridis'; // Başlangıçtaki renk skalası
 
-      function normalizeZValues(data) {
-        const zValues = data.map((point) => point.z);
-        const zMin = Math.min(...zValues);
-        const zMax = Math.max(...zValues);
+      // Renk skalaları
+      const colorScales = {
+        LuminousRainbow: [
+          [0, "#FF1A1A"], [0.2, "#FF8C00"], [0.4, "#FFFF00"], [0.6, "#32CD32"],
+          [0.8, "#00CED1"], [1, "#1E90FF"]
+        ],
+        BrightRainbow: [
+          [0, "#FF0000"], [0.2, "#FF7F00"], [0.4, "#FFFF00"], [0.6, "#00FF00"], [0.8, "#0000FF"], [1, "#8B00FF"]
+        ],
+        Electric: [
+          [0, "blue"], [0.4, "aqua"], [0.5, "darkgreen"], [0.55, "green"],
+          [0.7, "limegreen"], [0.8, "yellowgreen"], [0.9, "orange"], [1, "red"]
+        ],
+        Rainbow: [
+          [0, "purple"], [0.2, "blue"], [0.4, "green"], [0.6, "yellow"],
+          [0.8, "orange"], [1, "red"]
+        ]
+      };
 
-        // Tüm z değerleri aynıysa normalizasyon yapma
-        if (zMin === zMax) {
-          return data;
-        }
-
-        return data.map((point) => ({
-          ...point,
-          z: ((point.z - zMin) / (zMax - zMin)) * 0.7,
-        }));
+      // Renk skalasını değiştiren fonksiyon
+      function changeColorScale(scale) {
+        currentColorScale = scale;  // Seçilen renk skalasını güncelle
+        render3DSurface(data2);  // Haritayı yeniden render et
       }
 
       function render3DSurface(data) {
-        const messageElement = document.getElementById("message");
-        const plotlyElement = document.getElementById("plotly-3d-heatmap");
+  const plotlyElement = document.getElementById("plotly-3d-heatmap");
 
-        if (data.length === 0) {
-          messageElement.style.display = "block";
-          plotlyElement.style.display = "none";
-          return;
+  const xRange = Array.from(new Set(data.map((point) => point.x))).sort((a, b) => a - b);
+  const yRange = Array.from(new Set(data.map((point) => point.y))).sort((a, b) => a - b);
+
+  const x = [];
+  const y = [];
+  const z = [];
+
+  xRange.forEach((xVal) => {
+    x.push(xVal);
+    y.push(yRange.map((yVal) => yVal));
+    z.push(
+      yRange.map((yVal) => {
+        const point = data.find((p) => p.x === xVal && p.y === yVal);
+        if (selectedDataType === 'z') {
+          return point && !isNaN(point.z) ? Math.floor(point.z) : 0; // Z değeri NaN ise 0 yapıyoruz
+        } else if (selectedDataType === 'c') {
+          return point && !isNaN(point.c) ? Math.floor(point.c) : 0; // C değeri NaN ise 0 yapıyoruz
         } else {
-          messageElement.style.display = "none";
-          plotlyElement.style.display = "block";
+          return 0;
         }
+      })
+    );
+  });
 
-        const normalizedData = normalizeZValues(data);
+  const minZ = Math.min(...z.flat());
+  const maxZ = Math.max(...z.flat());
 
-        const xRange = Array.from(
-          new Set(normalizedData.map((point) => point.x))
-        ).sort((a, b) => a - b);
-        const yRange = Array.from(
-          new Set(normalizedData.map((point) => point.y))
-        ).sort((a, b) => a - b);
+  const trace = {
+    z: z,
+    x: x[0],
+    y: y.flat(),
+    type: "surface",
+    showscale: false,
+    colorscale: colorScales[currentColorScale],
+    contours: {
+      z: {
+        show: false,
+        highlightcolor: "red",
+        project: { z: true },
+      },
+    },
+  };
 
-        const x = [];
-        const y = [];
-        const z = [];
+  Plotly.newPlot(
+    "plotly-3d-heatmap",
+    [trace],
+    {
+      scene: {
+        xaxis: { title: "X" },
+        yaxis: { title: "Y" },
+        zaxis: { title: "Z", range: [minZ, maxZ] },
+      },
+      
+      margin: { l: 10, r: 10, b: 0, t: 0 },
+    },
+    {
+      responsive: true,
+      displayModeBar: false,
+    }
+  );
+}
 
-        xRange.forEach((xVal) => {
-          x.push(xVal);
-          y.push(yRange.map((yVal) => yVal));
-          z.push(
-            yRange.map((yVal) => {
-              const point = normalizedData.find(
-                (p) => p.x === xVal && p.y === yVal
-              );
-              return point ? point.z : 0;
-            })
-          );
+function render2DContourWithGrid(data) {
+  // Data boyutuna göre grid oluşturuyoruz, eğer data boyutu 9x9'dan küçükse o kadar grid çiziyoruz
+  const gridSize = Math.min(9, Math.sqrt(data.length)); // Maksimum 9x9 grid olacak, eğer veri sayısı küçükse ona göre ayarlanacak
+
+  const xMin = Math.min(...data.map(point => point.x));
+  const xMax = Math.max(...data.map(point => point.x));
+  const yMin = Math.min(...data.map(point => point.y));
+  const yMax = Math.max(...data.map(point => point.y));
+
+  // Grid adım boyutlarını ayarlıyoruz
+  const xStep = (xMax - xMin) / gridSize;
+  const yStep = (yMax - yMin) / gridSize;
+
+  // Grid çizgileri
+  const gridLines = {
+    x: [], y: [], mode: 'lines', type: 'scatter',
+    line: { color: 'black', width: 2 }
+  };
+
+  // Veri boyutuna göre çizgiler ekliyoruz
+  for (let i = 0; i <= gridSize; i++) {
+    const xVal = xMin + i * xStep;
+    const yVal = yMin + i * yStep;
+
+    // Dikey çizgiler
+    gridLines.x.push(xVal, xVal, null);
+    gridLines.y.push(yMin, yMax, null);
+
+    // Yatay çizgiler
+    gridLines.x.push(xMin, xMax, null);
+    gridLines.y.push(yVal, yVal, null);
+  }
+
+  // Anotasyonlar (değerlerin karelerin ortasında gösterilmesi)
+  const annotations = [];
+  for (let i = 0; i < gridSize; i++) {
+    for (let j = 0; j < gridSize; j++) {
+      const xStart = xMin + i * xStep;
+      const xEnd = xMin + (i + 1) * xStep;
+      const yStart = yMin + j * yStep;
+      const yEnd = yMin + (j + 1) * yStep;
+
+      const pointsInGrid = data.filter(point =>
+        point.x >= xStart && point.x < xEnd &&
+        point.y >= yStart && point.y < yEnd
+      );
+
+      if (pointsInGrid.length > 0) {
+        const avgValue = selectedDataType === 'z'
+          ? Math.floor(pointsInGrid.reduce((sum, point) => sum + (!isNaN(point.z) ? point.z : 0), 0) / pointsInGrid.length)
+          : Math.floor(pointsInGrid.reduce((sum, point) => sum + (!isNaN(point.c) ? point.c : 0), 0) / pointsInGrid.length);
+
+        annotations.push({
+          x: (xStart + xEnd) / 2,
+          y: (yStart + yEnd) / 2,
+          text: avgValue.toString(), // Küsuratları kaldırarak değerleri yazdırıyoruz
+          showarrow: false,
+          font: { color: 'black' },
+          xanchor: 'center',
+          yanchor: 'middle',
         });
-
-        const trace = {
-          z: z,
-          x: x[0],
-          y: y.flat(),
-          type: "surface",
-          showscale: false,
-          colorscale: [
-            [0, "blue"],
-            [0.4, "aqua"],
-            [0.5, "darkgreen"],
-            [0.55, "green"],
-            [0.7, "limegreen"],
-            [0.8, "yellowgreen"],
-            [0.9, "orange"],
-            [1, "red"],
-          ],
-          contours: {
-            z: {
-              show: true,
-              highlightcolor: "red",
-              project: { z: true },
-            },
-          },
-        };
-
-        Plotly.react(
-          "plotly-3d-heatmap",
-          [trace],
-          {
-            scene: {
-              xaxis: { title: "X" },
-              yaxis: { title: "Y" },
-              zaxis: { title: "Z", range: [-5, 5] },
-              camera: {
-                eye: { x: 0, y: 0, z: 2.5 },
-              },
-            },
-            margin: { l: 10, r: 10, b: 0, t: 0 },
-          },
-          {
-            responsive: true,
-            displayModeBar: false,
-          }
-        );
       }
+    }
+  }
 
-      // Initial render (will show the message if xyz is empty)
-      render3DSurface(xyz);
+  // X ve Y eksenleri için benzersiz değerler alınıyor
+  const x = [...new Set(data.map(point => point.x))];
+  const y = [...new Set(data.map(point => point.y))];
+  const z = [];
 
-      document.addEventListener("message", (event) => {
-        const data = JSON.parse(event.data);
-        if (data.values !== undefined) {
-          render3DSurface(data.values);
-        }
+  // Z değerlerini oluşturma (küsurat kontrolüyle)
+  x.forEach((xVal) => {
+    const zRow = [];
+    y.forEach((yVal) => {
+      const point = data.find((p) => p.x === xVal && p.y === yVal);
+      zRow.push(point ? (selectedDataType === 'z' ? Math.floor(!isNaN(point.z) ? point.z : 0) : Math.floor(!isNaN(point.c) ? point.c : 0)) : 0);
+    });
+    z.push(zRow);
+  });
+
+  const trace = {
+  x: x,
+  y: y,
+  z: z,
+  type: 'contour',
+  colorscale: colorScales[currentColorScale],
+  showscale: false, // Renk ölçeğini gizlemek için
+  contours: {
+    coloring: 'heatmap', // Sadece ısı haritası, kontur çizgisi yok
+    showlines: false, // Kontur çizgilerini kapatıyoruz
+  },
+  line: {
+    width: 0, // Çizgi genişliğini sıfırlıyoruz (gizli çizgiler)
+  },
+};
+
+
+  // Plotly grafiği oluşturma
+  Plotly.react(
+    document.getElementById('plotly-3d-heatmap'),
+    [trace, gridLines],
+    {
+      annotations: annotations,
+      xaxis: { title: "X", range: [xMin, xMax] },
+      yaxis: { title: "Y", range: [yMin, yMax] },
+      margin: { l: 50, r: 50, b: 50, t: 50 },
+    },
+    {
+      responsive: true,
+      displayModeBar: false,
+    }
+  );
+}
+
+      let isZEnabled = false;
+let isCEnabled = false;
+
+// Mesaj dinleyici
+document.addEventListener("message", (event) => {
+  const data = JSON.parse(event.data);
+  const zButton = document.getElementById('zButton');
+  const cButton = document.getElementById('cButton');
+
+  console.log("React Native'den gelen veri:", data);
+
+  // Veriyi aldıktan sonra işlemleri yapabilirsiniz
+  if (data.values !== undefined) {
+    data2 = data.values; // Veriyi global bir değişkene atıyoruz
+    render3DSurface(data2); // Veriyi aldıktan sonra grafiği çizdiriyoruz
+
+    // Z ve C değerlerinin olup olmadığını kontrol et
+    const hasZData = data.values.some((point) => point.z !== null && !isNaN(point.z)); // Z değerlerini kontrol et
+    const hasCData = data.values.some((point) => point.c !== null && !isNaN(point.c)); // C değerlerini kontrol et
+
+    // Butonların görünürlük durumunu güncelle
+    zButton.style.display = hasZData ? 'block' : 'none';  // Z verisi varsa göster, yoksa gizle
+    cButton.style.display = hasCData ? 'block' : 'none';  // C verisi varsa göster, yoksa gizle
+
+    // Z ve C butonlarını aktif veya inaktif yapma
+    zButton.disabled = !hasZData;  // Z verisi yoksa butonu inaktif yap
+    cButton.disabled = !hasCData;  // C verisi yoksa butonu inaktif yap
+  }
+});
+
+
+
+// Veri tipi butonlarına tıklama olaylarını dinle
+document.getElementById('cButton').addEventListener('click', () => {
+  if (!document.getElementById('cButton').disabled) {
+    selectedDataType = 'c';
+    document.getElementById('cButton').classList.add('active');
+    document.getElementById('zButton').classList.remove('active');
+    render3DSurface(data2); // Grafiği hemen yeniden çiz
+  }
+});
+
+document.getElementById('zButton').addEventListener('click', () => {
+  if (!document.getElementById('zButton').disabled) {
+    selectedDataType = 'z';
+    document.getElementById('zButton').classList.add('active');
+    document.getElementById('cButton').classList.remove('active');
+    render3DSurface(data2); // Grafiği hemen yeniden çiz
+  }
+});
+
+
+
+    
+      // 2D butonuna tıklama işlemi
+      document.getElementById('show2DButton').addEventListener('click', () => {
+        render2DContourWithGrid(data2); // 2D gridli kontur haritasını render ediyoruz
       });
 
-      window.addEventListener("message", (event) => {
-        const data = JSON.parse(event.data);
-        if (data.values !== undefined) {
-          render3DSurface(data.values);
-        }
+      // Grafik alanını pencere boyutuna göre yeniden boyutlandır
+      window.addEventListener("resize", () => {
+        Plotly.Plots.resize(document.getElementById("plotly-3d-heatmap"));
       });
     </script>
   </body>
 </html>
+
+

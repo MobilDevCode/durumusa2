@@ -10,6 +10,7 @@ import {
   Dimensions,
   TouchableOpacity,
 } from "react-native";
+import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 
 export function Home({ route, navigation }: any) {
   const [List, SetList] = useState([
@@ -21,6 +22,7 @@ export function Home({ route, navigation }: any) {
       color: "#1e90ff", // Mavi
       path: "ThreeDScan",
       modal: true,
+icon: "grid-view", // MaterialIcons ikon
     },
     {
       id: "2",
@@ -29,6 +31,7 @@ export function Home({ route, navigation }: any) {
         "Anlık verilerle zemin yapısını gerçek zamanlı izleme ve analiz etme.",
       color: "#32cd32", // Yeşil
       path: "LiveScan",
+icon: "pulse", // Ionicons ikon
     },
     {
       id: "3",
@@ -37,6 +40,7 @@ export function Home({ route, navigation }: any) {
         "Önceden kaydedilmiş tarama verilerini hızlıca gözden geçirin.",
       color: "#ff4500", // Turuncu
       path: "Files",
+icon: "folder-open", // MaterialIcons ikon
     },
     {
       id: "4",
@@ -45,7 +49,8 @@ export function Home({ route, navigation }: any) {
         "Bağlantılı tarama cihazlarının ayarlarını yönetin ve kontrol edin.",
       color: "#8a2be2", // Mor
       path: "DeviceManager",
-    },
+    icon: "settings", // Ionicons ikon
+    }
   ]);
 
   const [modalVisible, setModalVisible] = useState(false);
@@ -64,6 +69,11 @@ export function Home({ route, navigation }: any) {
       }}
     >
       <View style={[styles.item, { backgroundColor: item.color }]}>
+{item.id === "2" || item.id === "4" ? (
+          <Ionicons name={item.icon} size={24} color="white" /> // Ionicons için kontrol
+        ) : (
+          <MaterialIcons name={item.icon} size={24} color="white" /> // MaterialIcons için kontrol
+        )}
         <Text style={styles.title}>{item.name}</Text>
         <Text style={styles.description}>{item.description}</Text>
       </View>

@@ -51,6 +51,9 @@ export function LiveScan() {
     data: [scanData / 100], // Veriyi 0 ile 1 arasında olacak şekilde normalleştiriyoruz
   };
 
+ 
+
+
   return (
     <View style={styles.container}>
       <WebView
@@ -58,7 +61,10 @@ export function LiveScan() {
         style={{ flex: 1 }}
         originWhitelist={["*"]}
         source={{ uri: "file:///android_asset/gauge.html" }}
-        javaScriptEnabled
+        javaScriptEnabled={true}
+        allowFileAccess={true} // Dosya erişimini etkinleştir
+        allowUniversalAccessFromFileURLs={true} // Tüm URL'lerden dosya erişimine izin ver
+      
       />
     </View>
   );

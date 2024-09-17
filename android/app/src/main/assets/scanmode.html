@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <script src="./plotly.min.js"></script>
+    <script src="plotly.min.js"></script>
     <style>
       body,
       html {
@@ -11,17 +11,20 @@
         padding: 0;
         height: 100%;
         width: 100%;
-      }
-      #plotly-3d-heatmap {
-        width: 100vw;
-        height: 100vh;
-      }
-      #colorbar-container {
-        width: 100vw;
-        height: 100vh;
         display: flex;
-        justify-content: center;
-        align-items: center;
+        flex-direction: column;
+      }
+      #plotly-3d-heatmap,
+      #plotly-2d-heatmap {
+        width: 100vw;
+        height: 100vh;
+        display: none; /* Başlangıçta grafikler gizlenir */
+      }
+      #controls {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 100;
       }
       #message {
         position: absolute;
@@ -31,10 +34,22 @@
         font-size: 16px;
         display: none;
       }
+      button {
+        margin: 5px;
+        padding: 10px;
+        font-size: 16px;
+        cursor: pointer;
+      }
     </style>
   </head>
   <body>
+    <div id="controls">
+      <button onclick="show3D()">3D Görünüm</button>
+      <button onclick="show2D()">2D Görünüm</button>
+    </div>
+
     <div id="plotly-3d-heatmap"></div>
+    <div id="plotly-2d-heatmap"></div>
     <div id="message">Hazırlanıyor...</div>
 
     <script>
@@ -56,6 +71,21 @@
         }));
       }
 
+      // 3D görünümü göster ve 2D görünümü gizle
+      function show3D() {
+        document.getElementById("plotly-3d-heatmap").style.display = "block";
+        document.getElementById("plotly-2d-heatmap").style.display = "none";
+        render3DSurface(xyz);
+      }
+
+      // 2D görünümü göster ve 3D görünümü gizle
+      function show2D() {
+        document.getElementById("plotly-2d-heatmap").style.display = "block";
+        document.getElementById("plotly-3d-heatmap").style.display = "none";
+        render2DHeatmap(xyz);
+      }
+
+      // 3D grafiği oluşturma
       function render3DSurface(data) {
         const messageElement = document.getElementById("message");
         const plotlyElement = document.getElementById("plotly-3d-heatmap");
@@ -95,7 +125,7 @@
           );
         });
 
-        const trace = {
+        const trace3D = {
           z: z,
           x: x[0],
           y: y.flat(),
@@ -122,7 +152,7 @@
 
         Plotly.react(
           "plotly-3d-heatmap",
-          [trace],
+          [trace3D],
           {
             scene: {
               xaxis: { title: "X" },
@@ -141,20 +171,90 @@
         );
       }
 
-      // Initial render (will show the message if xyz is empty)
-      render3DSurface(xyz);
+      // 2D grafiği oluşturma
+      function render2DHeatmap(data) {
+        const plotlyElement = document.getElementById("plotly-2d-heatmap");
 
+        if (data.length === 0) {
+          plotlyElement.style.display = "none";
+          return;
+        } else {
+          plotlyElement.style.display = "block";
+        }
+
+        const normalizedData = normalizeZValues(data);
+
+        const xRange = Array.from(
+          new Set(normalizedData.map((point) => point.x))
+        ).sort((a, b) => a - b);
+        const yRange = Array.from(
+          new Set(normalizedData.map((point) => point.y))
+        ).sort((a, b) => a - b);
+
+        const x = xRange; // X ekseni
+        const y = yRange; // Y ekseni
+        const z = yRange.map((yVal) => {
+          return xRange.map((xVal) => {
+            const point = normalizedData.find(
+              (p) => p.x === xVal && p.y === yVal
+            );
+            return point ? point.z : 0;
+          });
+        });
+        const trace2D = {
+  x: x,
+  y: y,
+  z: z,
+  type: 'contour',
+  showscale: false, // Renk ölçeğini gizlemek için
+  contours: {
+    coloring: 'heatmap', // Sadece ısı haritası, kontur çizgisi yok
+    showlines: false, // Kontur çizgilerini kapatıyoruz
+  },
+  line: {
+    width: 0, // Çizgi genişliğini sıfırlıyoruz (gizli çizgiler)
+  },
+};
+        Plotly.react(
+          "plotly-2d-heatmap",
+          [trace2D],
+          {
+            xaxis: { title: "X" },
+            yaxis: { title: "Y" },
+            margin: { l: 50, r: 50, b: 50, t: 50 },
+          },
+          {
+            responsive: true,
+            displayModeBar: false,
+          }
+        );
+      }
+
+      // Mesaj alındığında aktif olan grafik güncellensin
       document.addEventListener("message", (event) => {
         const data = JSON.parse(event.data);
         if (data.values !== undefined) {
-          render3DSurface(data.values);
+          xyz = data.values;
+          // Aktif olan grafiği yeniden çiz
+          if (document.getElementById("plotly-3d-heatmap").style.display === "block") {
+            render3DSurface(data.values);
+          } else if (document.getElementById("plotly-2d-heatmap").style.display === "block") {
+            render2DHeatmap(data.values);
+          }
         }
       });
 
+      // Mesaj dinleyici (gelen veriyi işlemeye devam eder)
       window.addEventListener("message", (event) => {
         const data = JSON.parse(event.data);
         if (data.values !== undefined) {
-          render3DSurface(data.values);
+          xyz = data.values;
+          // Aktif olan grafiği yeniden çiz
+          if (document.getElementById("plotly-3d-heatmap").style.display === "block") {
+            render3DSurface(data.values);
+          } else if (document.getElementById("plotly-2d-heatmap").style.display === "block") {
+            render2DHeatmap(data.values);
+          }
         }
       });
     </script>
