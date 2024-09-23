@@ -13,6 +13,7 @@ interface DataPoint {
   x: number;
   y: number;
   z: number;
+  c: number;
 }
 
 export function ThreeDScan({ route, navigation }: ThreeDScanProps) {
@@ -27,6 +28,8 @@ export function ThreeDScan({ route, navigation }: ThreeDScanProps) {
 
   // Ses objesi için state
   const [sound, setSound] = useState<Audio.Sound | null>(null);
+
+  const [Vref, setVref] = useState<number | null>(null);
 
   // Beep sesini çalmak için fonksiyon
  
@@ -61,7 +64,7 @@ useEffect(() => {
 
     for (let x = 0; x < cols; x++) {
       for (let y = 0; y < rows; y++) {
-        data.push({ x: x * step, y: y * step, z: 0 });
+        data.push({ x: x * step, y: y * step, z: 0, c: 0 });
       }
     }
 
@@ -83,9 +86,9 @@ useEffect(() => {
   const saveToCSV = async () => {
     if (CSVData) {
       // CSV başlıklarını ekleyelim
-      const header = "x,y,z\n";
+      const header = "x,y,z,c\n";
       const csvContent = CSVData.map(
-        (data) => `${data.x},${data.y},${data.z}`
+        (data) => `${data.x},${data.y},${data.z},${data.c}`
       ).join("\n");
       const completeContent = header + csvContent;
 
@@ -125,12 +128,36 @@ useEffect(() => {
     }
   };
 
+  const calculateCValue = (zRawValue: number) => {
+    const sensitivity = 1.1;  
+
+    if (Vref === null) {
+      return 0; 
+    }
+
+    const voltage = (zRawValue / 1023) * 5; 
+    const cValue = (voltage - Vref) / sensitivity;  
+    return parseFloat(cValue.toFixed(3)); 
+  };
+
+
   const updateZValue = async () => {
     // Ölçüm al butonuna tıklanınca beep sesi çal
     await playBeepSound();
 
     if (CSVData && currentIndex < CSVData.length) {
       const newData = [...CSVData];
+      const zRawValue = await getData();  
+
+      if (Vref === null) {
+        if (zRawValue === null || isNaN(zRawValue)) {
+            setVref(0);  // Eğer geçersiz bir değer varsa, işlemi durdur
+        } else {
+            // Geçerli Z değeri varsa Vref hesapla
+            setVref((zRawValue / 1023) * 5);
+        }
+      }
+      const cValue = calculateCValue(zRawValue);
       if (isZigzag) {
         const rowLength = params.x;
         const zigzagIndex =
@@ -139,9 +166,11 @@ useEffect(() => {
             : Math.floor(currentIndex / rowLength) * rowLength +
               (rowLength - 1) -
               (currentIndex % rowLength);
-        newData[zigzagIndex].z = await getData();
+        newData[zigzagIndex].z = zRawValue;
+        newData[zigzagIndex].c = cValue;
       } else {
-        newData[currentIndex].z = await getData();
+        newData[currentIndex].z = zRawValue;
+        newData[currentIndex].c = cValue;
       }
       SetCSVData(newData);
 
