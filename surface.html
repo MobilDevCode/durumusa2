@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+   <script src="plotly.min.js"></script>
+    <style>
+      body, html {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        width: 100%;
+      }
+      #plotly-3d-heatmap {
+        width: 100vw;
+        height: calc(100vh - 120px); /* Butonlar için üstte 120px yer ayırıyoruz */
+        position: relative;
+        top: 0;
+        left: 0;
+        
+      }
+      .control-panel {
+        width: 100%;
+        height: 120px; /* Butonlar için 120px yükseklik */
+        display: flex;
+        flex-direction: column; /* Üst üste hizalama */
+        align-items: center;
+        background-color: rgba(255, 255, 255, 0.9);
+        padding: 10px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+      }
+      .radio-buttons, .color-buttons {
+        display: flex;
+        gap: 15px;  /* Butonlar arasında boşluk */
+      }
+      .color-buttons {
+        margin-top: 15px;  /* Renk butonları ile radio butonları arasına boşluk bırakıyoruz */
+      }
+      .color-button {
+        padding: 5px 10px;
+        background-color: #000;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        cursor: pointer;
+        color: #ccc;
+        text-align: center;
+        transition: background-color 0.3s ease, transform 0.1s ease;
+      }
+      .color-button:hover {
+        background-color: #333;
+      }
+      .color-button:active {
+        transform: scale(0.95);
+        background-color: #555;
+      }
+      .radio-buttons label {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="plotly-3d-heatmap"></div>
+    
+    <div class="control-panel">
+     
+      <div class="color-buttons">
+        <button class="color-button" id="cButton">Derinlik</button>
+        <button class="color-button" id="zButton">Sinyal</button>
+      <button class="color-button" id="show2DButton">2D Görünüm Göster</button>
+      <div class="camera-controls">
+        <label for="cameraX">Kamera X: <span id="cameraXValue">1.5</span></label>
+        <input type="range" id="cameraX" min="-5" max="5" step="0.1" value="1.5">
+        
+        <label for="cameraY">Kamera Y: <span id="cameraYValue">1.5</span></label>
+        <input type="range" id="cameraY" min="-5" max="5" step="0.1" value="1.5">
+        
+        <label for="cameraZ">Kamera Z: <span id="cameraZValue">1.5</span></label>
+        <input type="range" id="cameraZ" min="-5" max="5" step="0.1" value="1.5">
+      </div>
+      </div>
+      
+
+      
+      <!-- Renk Butonları -->
+      <div class="color-buttons">
+        <div class="color-button" onclick="changeColorScale('LuminousRainbow')">Luminous Rainbow</div>
+        <div class="color-button" onclick="changeColorScale('BrightRainbow')">Bright Rainbow</div>
+        <div class="color-button" onclick="changeColorScale('Electric')">Electric</div>
+        <div class="color-button" onclick="changeColorScale('Rainbow')">Rainbow</div>
+      </div>
+    
+      <!-- Yeni 2D Görünüm Butonu -->
+    </div>
+
+    <script>
+      let data2;
+      let selectedDataType = 'z'; // Başlangıçta 'z' olarak ayarlıyoruz
+      let currentColorScale = 'Viridis'; // Başlangıçtaki renk skalası
+
+      // Renk skalaları
+      const colorScales = {
+        LuminousRainbow: [
+          [0, "#FF1A1A"], [0.2, "#FF8C00"], [0.4, "#FFFF00"], [0.6, "#32CD32"],
+          [0.8, "#00CED1"], [1, "#1E90FF"]
+        ],
+        BrightRainbow: [
+          [0, "#FF0000"], [0.2, "#FF7F00"], [0.4, "#FFFF00"], [0.6, "#00FF00"], [0.8, "#0000FF"], [1, "#8B00FF"]
+        ],
+        Electric: [
+          [0, "blue"], [0.4, "aqua"], [0.5, "darkgreen"], [0.55, "green"],
+          [0.7, "limegreen"], [0.8, "yellowgreen"], [0.9, "orange"], [1, "red"]
+        ],
+        Rainbow: [
+          [0, "purple"], [0.2, "blue"], [0.4, "green"], [0.6, "yellow"],
+          [0.8, "orange"], [1, "red"]
+        ]
+      };
+
+      // Renk skalasını değiştiren fonksiyon
+      function changeColorScale(scale) {
+        currentColorScale = scale;  // Seçilen renk skalasını güncelle
+        render3DSurface(data2);  // Haritayı yeniden render et
+      }
+      function render3DSurface(data) {
+  const plotlyElement = document.getElementById("plotly-3d-heatmap");
+
+  const xRange = Array.from(new Set(data.map((point) => point.x))).sort((a, b) => a - b);
+  const yRange = Array.from(new Set(data.map((point) => point.y))).sort((a, b) => a - b);
+
+  const x = [];
+  const y = [];
+  const z = [];
+
+  yRange.forEach((yVal) => {
+    y.push(yVal);
+    x.push(xRange.map((xVal) => xVal));
+    z.push(
+      xRange.map((xVal) => {
+        const point = data.find((p) => p.x === xVal && p.y === yVal);
+        if (selectedDataType === 'z') {
+          return point && !isNaN(point.z) ? Math.floor(point.z) : 0;
+        } else if (selectedDataType === 'c') {
+          return point && !isNaN(point.c) ? Math.floor(point.c) : 0;
+        } else {
+          return 0;
+        }
+      })
+    );
+  });
+
+  const minZ = Math.min(...z.flat());
+  const maxZ = Math.max(...z.flat());
+
+  const trace = {
+    z: z,
+    x: x.flat(),
+    y: y,
+    type: "surface",
+    showscale: false,
+    colorscale: colorScales[currentColorScale],
+    contours: {
+      z: {
+        show: false,
+        highlightcolor: "red",
+        project: { z: true },
+      },
+    },
+  };
+
+  // İlk render sırasında varsayılan kamera ayarları
+  const camera = {
+    eye: { x: parseFloat(document.getElementById('cameraX').value), y: parseFloat(document.getElementById('cameraY').value), z: parseFloat(document.getElementById('cameraZ').value) },
+    center: { x: 0, y: 0, z: 0 },
+    up: { x: 0, y: 0, z: 1 },
+  };
+
+  Plotly.newPlot(
+    "plotly-3d-heatmap",
+    [trace],
+    {
+      scene: {
+        xaxis: { title: "Y" },
+        yaxis: { title: "X" },
+        zaxis: { title: "Z", range: [minZ, maxZ] },
+        camera: camera,
+      },
+      margin: { l: 10, r: 10, b: 0, t: 0 },
+    },
+    {
+      responsive: true,
+      displayModeBar: false,
+    }
+  );
+}
+
+// Kamera kaydırıcılarının değişimlerini dinleme ve grafiği güncelleme
+document.getElementById('cameraX').addEventListener('input', updateCamera);
+document.getElementById('cameraY').addEventListener('input', updateCamera);
+document.getElementById('cameraZ').addEventListener('input', updateCamera);
+
+function updateCamera() {
+  // Kaydırıcıların değerlerini güncelleme
+  document.getElementById('cameraXValue').innerText = document.getElementById('cameraX').value;
+  document.getElementById('cameraYValue').innerText = document.getElementById('cameraY').value;
+  document.getElementById('cameraZValue').innerText = document.getElementById('cameraZ').value;
+
+  const camera = {
+    eye: {
+      x: parseFloat(document.getElementById('cameraX').value),
+      y: parseFloat(document.getElementById('cameraY').value),
+      z: parseFloat(document.getElementById('cameraZ').value)
+    },
+    center: { x: 0, y: 0, z: 0 },
+    up: { x: 0, y: 0, z: 1 },
+  };
+
+  // Kamerayı dinamik olarak güncelleme
+  Plotly.relayout('plotly-3d-heatmap', {
+    'scene.camera': camera
+  });
+}
+
+function render2DContourWithGrid(data) {
+  const gridSize = Math.min(9, Math.sqrt(data.length));
+
+  const xMin = Math.min(...data.map(point => point.x));
+  const xMax = Math.max(...data.map(point => point.x));
+  const yMin = Math.min(...data.map(point => point.y));
+  const yMax = Math.max(...data.map(point => point.y));
+
+  const xStep = (xMax - xMin) / gridSize;
+  const yStep = (yMax - yMin) / gridSize;
+
+  const gridLines = {
+    x: [], y: [], mode: 'lines', type: 'scatter',
+    line: { color: 'black', width: 2 }
+  };
+
+  for (let i = 0; i <= gridSize; i++) {
+    const xVal = xMin + i * xStep;
+    const yVal = yMin + i * yStep;
+
+    gridLines.x.push(xVal, xVal, null);
+    gridLines.y.push(yMin, yMax, null);
+
+    gridLines.x.push(xMin, xMax, null);
+    gridLines.y.push(yVal, yVal, null);
+  }
+
+  const annotations = [];
+  for (let i = 0; i < gridSize; i++) {
+    for (let j = 0; j < gridSize; j++) {
+      const xStart = xMin + i * xStep;
+      const xEnd = xMin + (i + 1) * xStep;
+      const yStart = yMin + j * yStep;
+      const yEnd = yMin + (j + 1) * yStep;
+
+      const pointsInGrid = data.filter(point =>
+        point.x >= xStart && point.x < xEnd &&
+        point.y >= yStart && point.y < yEnd
+      );
+
+      if (pointsInGrid.length > 0) {
+        const avgValue = selectedDataType === 'z'
+          ? Math.floor(pointsInGrid.reduce((sum, point) => sum + (!isNaN(point.z) ? point.z : 0), 0) / pointsInGrid.length)
+          : Math.floor(pointsInGrid.reduce((sum, point) => sum + (!isNaN(point.c) ? point.c : 0), 0) / pointsInGrid.length);
+
+        annotations.push({
+          x: (xStart + xEnd) / 2,
+          y: (yStart + yEnd) / 2,
+          text: avgValue.toString(),
+          showarrow: false,
+          font: { color: 'black' },
+          xanchor: 'center',
+          yanchor: 'middle',
+        });
+      }
+    }
+  }
+
+  const x = [...new Set(data.map(point => point.y))];  // Y'yi X'e alıyoruz
+  const y = [...new Set(data.map(point => point.x))];  // X'i Y'ye alıyoruz
+  const z = [];
+
+  x.forEach((xVal) => {
+    const zRow = [];
+    y.forEach((yVal) => {
+      const point = data.find((p) => p.x === yVal && p.y === xVal);
+      zRow.push(point ? (selectedDataType === 'z' ? Math.floor(!isNaN(point.z) ? point.z : 0) : Math.floor(!isNaN(point.c) ? point.c : 0)) : 0);
+    });
+    z.push(zRow);
+  });
+
+  const trace = {
+    x: x,
+    y: y,
+    z: z,
+    type: 'contour',
+    colorscale: colorScales[currentColorScale],
+    showscale: false,
+    contours: {
+      coloring: 'heatmap',
+      showlines: false,
+    },
+    line: {
+      width: 0,
+    },
+  };
+
+  Plotly.react(
+    document.getElementById('plotly-3d-heatmap'),
+    [trace, gridLines],
+    {
+      annotations: annotations,
+      xaxis: { title: "Y", range: [xMin, xMax] },
+      yaxis: { title: "X", range: [yMin, yMax] },
+      margin: { l: 50, r: 50, b: 50, t: 50 },
+    },
+    {
+      responsive: true,
+      displayModeBar: false,
+    }
+  );
+}
+
+      let isZEnabled = false;
+let isCEnabled = false;
+
+// Mesaj dinleyici
+document.addEventListener("message", (event) => {
+  const data = JSON.parse(event.data);
+  const zButton = document.getElementById('zButton');
+  const cButton = document.getElementById('cButton');
+
+  console.log("React Native'den gelen veri:", data);
+
+  // Veriyi aldıktan sonra işlemleri yapabilirsiniz
+  if (data.values !== undefined) {
+    data2 = data.values; // Veriyi global bir değişkene atıyoruz
+    render3DSurface(data2); // Veriyi aldıktan sonra grafiği çizdiriyoruz
+
+    // Z ve C değerlerinin olup olmadığını kontrol et
+    const hasZData = data.values.some((point) => point.z !== null && !isNaN(point.z)); // Z değerlerini kontrol et
+    const hasCData = data.values.some((point) => point.c !== null && !isNaN(point.c)); // C değerlerini kontrol et
+
+    // Butonların görünürlük durumunu güncelle
+    zButton.style.display = hasZData ? 'block' : 'none';  // Z verisi varsa göster, yoksa gizle
+    cButton.style.display = hasCData ? 'block' : 'none';  // C verisi varsa göster, yoksa gizle
+
+    // Z ve C butonlarını aktif veya inaktif yapma
+    zButton.disabled = !hasZData;  // Z verisi yoksa butonu inaktif yap
+    cButton.disabled = !hasCData;  // C verisi yoksa butonu inaktif yap
+  }
+});
+
+
+
+// Veri tipi butonlarına tıklama olaylarını dinle
+document.getElementById('cButton').addEventListener('click', () => {
+  if (!document.getElementById('cButton').disabled) {
+    selectedDataType = 'c';
+    document.getElementById('cButton').classList.add('active');
+    document.getElementById('zButton').classList.remove('active');
+    render3DSurface(data2); // Grafiği hemen yeniden çiz
+  }
+});
+
+document.getElementById('zButton').addEventListener('click', () => {
+  if (!document.getElementById('zButton').disabled) {
+    selectedDataType = 'z';
+    document.getElementById('zButton').classList.add('active');
+    document.getElementById('cButton').classList.remove('active');
+    render3DSurface(data2); // Grafiği hemen yeniden çiz
+  }
+});
+
+
+
+    
+      // 2D butonuna tıklama işlemi
+      document.getElementById('show2DButton').addEventListener('click', () => {
+        render2DContourWithGrid(data2); // 2D gridli kontur haritasını render ediyoruz
+      });
+
+      // Grafik alanını pencere boyutuna göre yeniden boyutlandır
+      window.addEventListener("resize", () => {
+        Plotly.Plots.resize(document.getElementById("plotly-3d-heatmap"));
+      });
+    </script>
+  </body>
+</html>
+
+
