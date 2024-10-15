@@ -3,7 +3,7 @@ import { Text, View, TouchableOpacity, Alert, Modal, TextInput } from "react-nat
 import WebView from "react-native-webview";
 import { Audio } from 'expo-av';  // Ses çalma kütüphanesi
 import { useBluetooth } from "../context/BluetoothContext";
-import RNFS from 'react-native-fs';
+import RNFS from "react-native-fs";
 
 interface ThreeDScanProps {
   route: any;
@@ -119,6 +119,13 @@ export function ThreeDScan({ route, navigation }: ThreeDScanProps) {
 
   
   const getData: any = async () => {
+
+    /*const randomValue = Math.random() * (51.999 - 51.0) + 51.0; 
+    console.log(randomValue);
+    return randomValue; */
+    
+
+
     if (connectedDevice) {
       try {
         await connectedDevice.write("M");
@@ -140,7 +147,7 @@ export function ThreeDScan({ route, navigation }: ThreeDScanProps) {
     if (Vref === null) {
       return 0;
     }
-    console.log(Vref);
+    
     const voltage = (zRawValue / 1023) * 5;
     const cValue = (voltage - Vref) / sensitivity;
     return parseFloat(cValue.toFixed(3));

@@ -53,9 +53,7 @@
   <div id="controls">
     <button onclick="show3D()">3D Görünüm</button>
     <button onclick="show2D()">2D Görünüm</button>
-    <div id="deger-goruntuleme">
 
-    </div>
   </div>
 
   <div id="plotly-3d-heatmap"></div>
@@ -64,23 +62,37 @@
 
   <script>
     let xyz = []; // Başlangıçta boş olacak
-
-    // React Native'den gelen mesajları dinleyen bir fonksiyon
-    document.addEventListener("message", function (event) {
-      const receivedData = JSON.parse(event.data);
-
-      // xyz arrayini güncelle
-      xyz = receivedData.values;
-
-      // z ve c değerlerini ekranda göster
-      const degerGoruntulemeDiv = document.getElementById("deger-goruntuleme");
-      degerGoruntulemeDiv.innerHTML = ""; // Önceki içerikleri temizle
-      xyz.forEach(point => {
-        const p = document.createElement("p");
-        p.textContent = `X: ${point.x}, Y: ${point.y}, Z: ${point.z}, C: ${point.c}`;
-        degerGoruntulemeDiv.appendChild(p);
-      });
+    // Mesaj alındığında aktif olan grafik güncellensin
+    document.addEventListener("message", (event) => {
+      const data = JSON.parse(event.data);
+      if (data.values !== undefined) {
+        xyz = data.values;
+        console.log(xyz);
+        // Aktif olan grafiği yeniden çiz
+        if (document.getElementById("plotly-3d-heatmap").style.display === "block") {
+          render3DSurface(data.values);
+        } else if (document.getElementById("plotly-2d-heatmap").style.display === "block") {
+          render2DHeatmap(data.values);
+        }
+      }
     });
+
+    // Mesaj dinleyici (gelen veriyi işlemeye devam eder)
+    window.addEventListener("message", (event) => {
+      const data = JSON.parse(event.data);
+      if (data.values !== undefined) {
+        xyz = data.values;
+        console.log(xyz);
+        // Aktif olan grafiği yeniden çiz
+        if (document.getElementById("plotly-3d-heatmap").style.display === "block") {
+          render3DSurface(data.values);
+        } else if (document.getElementById("plotly-2d-heatmap").style.display === "block") {
+          render2DHeatmap(data.values);
+        }
+      }
+    });
+
+
 
 
 
@@ -100,7 +112,40 @@
       render2DHeatmap(xyz);
     }
 
-    // 3D grafiği oluşturma
+    function normalizeZValues(data) {
+      // Z değerlerini alırken 0 olmayanları filtreliyoruz
+      const zValues = data.map(point => point.z).filter(z => z !== 0);
+
+      console.log("Filtered Z Values (0 olmayanlar):", zValues); // Z = 0 olmayan değerler
+
+      if (zValues.length === 0 || Math.max(...zValues) === Math.min(...zValues)) {
+        console.error("Z değerleri normalizasyon için uygun değil.");
+        return data; // Değiştirmeden geri döndürüyoruz
+      }
+
+      const minZ = Math.min(...zValues);
+      const maxZ = Math.max(...zValues);
+
+      if (minZ === maxZ) {
+        console.warn("Z değerleri normalizasyon için uygun değil:", minZ, maxZ);
+        return data; // Değiştirmeden geri döndürüyoruz
+      }
+
+      const normalizedData = data.map(point => ({
+        ...point,
+        // Z = 0 olan değerleri normalizasyona dahil etmiyoruz
+        z: point.z === 0 ? 0 : (point.z - minZ) / (maxZ - minZ) // Normalizasyon işlemi
+      }));
+
+      // Normalized z değerlerini konsola yazdır
+      console.log("Normalized Z Values:", normalizedData.map(point => point.z));
+
+      return normalizedData;
+    }
+
+
+
+
     function render3DSurface(data) {
       const messageElement = document.getElementById("message");
       const plotlyElement = document.getElementById("plotly-3d-heatmap");
@@ -114,13 +159,13 @@
         plotlyElement.style.display = "block";
       }
 
-
+      const normalizedData = normalizeZValues(data);
 
       const xRange = Array.from(
-        new Set(data.map((point) => point.x))
+        new Set(normalizedData.map((point) => point.x))
       ).sort((a, b) => a - b);
       const yRange = Array.from(
-        new Set(data.map((point) => point.y))
+        new Set(normalizedData.map((point) => point.y))
       ).sort((a, b) => a - b);
 
       const x = [];
@@ -132,7 +177,7 @@
         y.push(yRange.map((yVal) => yVal));
         z.push(
           yRange.map((yVal) => {
-            const point = data.find(
+            const point = normalizedData.find(
               (p) => p.x === xVal && p.y === yVal
             );
             return point ? point.z : 0;
@@ -147,14 +192,17 @@
         type: "surface",
         showscale: false,
         colorscale: [
-          [0, "blue"],
-          [0.4, "aqua"],
-          [0.5, "darkgreen"],
-          [0.55, "green"],
-          [0.7, "limegreen"],
-          [0.8, "yellowgreen"],
-          [0.9, "orange"],
-          [1, "red"],
+          [0, "navy"],
+          [0.1, "blue"],
+          [0.2, "cyan"],
+          [0.3, "lightblue"],
+          [0.4, "limegreen"],
+          [0.5, "yellow"],
+          [0.6, "orange"],
+          [0.7, "darkorange"],
+          [0.8, "red"],
+          [0.9, "darkred"],
+          [1, "maroon"],
         ],
         contours: {
           z: {
@@ -185,6 +233,8 @@
         }
       );
     }
+
+
 
     // 2D grafiği oluşturma
     function render2DHeatmap(data) {
@@ -227,14 +277,17 @@
           showlines: false, // Kontur çizgilerini kapatıyoruz
         },
         colorscale: [
-          [0, "blue"],
-          [0.4, "aqua"],
-          [0.5, "darkgreen"],
-          [0.55, "green"],
-          [0.7, "limegreen"],
-          [0.8, "yellowgreen"],
-          [0.9, "orange"],
-          [1, "red"],
+          [0, "navy"],        // 0
+          [0.1, "blue"],     // 0.1
+          [0.2, "cyan"],     // 0.2
+          [0.3, "lightblue"], // 0.3
+          [0.4, "limegreen"], // 0.4
+          [0.5, "yellow"],    // 0.5
+          [0.6, "orange"],    // 0.6
+          [0.7, "darkorange"], // 0.7
+          [0.8, "red"],       // 0.8
+          [0.9, "darkred"],   // 0.9
+          [1, "maroon"],      // 1
         ],
         line: {
           width: 0, // Çizgi genişliğini sıfırlıyoruz (gizli çizgiler)
@@ -255,33 +308,7 @@
       );
     }
 
-    // Mesaj alındığında aktif olan grafik güncellensin
-    document.addEventListener("message", (event) => {
-      const data = JSON.parse(event.data);
-      if (data.values !== undefined) {
-        xyz = data.values;
-        // Aktif olan grafiği yeniden çiz
-        if (document.getElementById("plotly-3d-heatmap").style.display === "block") {
-          render3DSurface(data.values);
-        } else if (document.getElementById("plotly-2d-heatmap").style.display === "block") {
-          render2DHeatmap(data.values);
-        }
-      }
-    });
 
-    // Mesaj dinleyici (gelen veriyi işlemeye devam eder)
-    window.addEventListener("message", (event) => {
-      const data = JSON.parse(event.data);
-      if (data.values !== undefined) {
-        xyz = data.values;
-        // Aktif olan grafiği yeniden çiz
-        if (document.getElementById("plotly-3d-heatmap").style.display === "block") {
-          render3DSurface(data.values);
-        } else if (document.getElementById("plotly-2d-heatmap").style.display === "block") {
-          render2DHeatmap(data.values);
-        }
-      }
-    });
   </script>
 </body>
 
