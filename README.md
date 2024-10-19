@@ -1,3 +1,1 @@
-# durumusa
-# durumusa2
-# durumusa2
+son hali 2dboyutluharitaduzenlemsi branchı ordan devam ediyoruz 
