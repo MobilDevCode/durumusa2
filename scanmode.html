@@ -56,20 +56,35 @@
       let xyz = []; // Başlangıçta boş
 
       function normalizeZValues(data) {
-        const zValues = data.map((point) => point.z);
-        const zMin = Math.min(...zValues);
-        const zMax = Math.max(...zValues);
+      // Z değerlerini alırken 0 olmayanları filtreliyoruz
+      const zValues = data.map(point => point.z).filter(z => z !== 0);
 
-        // Tüm z değerleri aynıysa normalizasyon yapma
-        if (zMin === zMax) {
-          return data;
-        }
+      console.log("Filtered Z Values (0 olmayanlar):", zValues); // Z = 0 olmayan değerler
 
-        return data.map((point) => ({
-          ...point,
-          z: ((point.z - zMin) / (zMax - zMin)) * 0.7,
-        }));
+      if (zValues.length === 0 || Math.max(...zValues) === Math.min(...zValues)) {
+        console.error("Z değerleri normalizasyon için uygun değil.");
+        return data; // Değiştirmeden geri döndürüyoruz
       }
+
+      const minZ = Math.min(...zValues);
+      const maxZ = Math.max(...zValues);
+
+      if (minZ === maxZ) {
+        console.warn("Z değerleri normalizasyon için uygun değil:", minZ, maxZ);
+        return data; // Değiştirmeden geri döndürüyoruz
+      }
+
+      const normalizedData = data.map(point => ({
+        ...point,
+        // Z = 0 olan değerleri normalizasyona dahil etmiyoruz
+        z: point.z === 0 ? 0 : (point.z - minZ) / (maxZ - minZ) // Normalizasyon işlemi
+      }));
+
+      // Normalized z değerlerini konsola yazdır
+      console.log("Normalized Z Values:", normalizedData.map(point => point.z));
+
+      return normalizedData;
+    }
 
       // 3D görünümü göster ve 2D görünümü gizle
       function show3D() {

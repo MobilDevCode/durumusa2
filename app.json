@@ -41,7 +41,9 @@
         "BLUETOOTH_CONNECT",
         "BLUETOOTH_ADVERTISE",
         "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE"
+        "WRITE_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
       ]
     },
     "androidNavigationBar": {
@@ -70,10 +72,10 @@
           "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone."
         }
       ]
-    ],    
+    ],
     "extra": {
       "eas": {
-        "projectId": "4e0664e7-51e5-4d77-acbb-5aa24d1741f8"
+        "projectId": "0d0dfb95-9dbe-47f8-8fed-245f4bdc67a6"
       }
     }
   }
