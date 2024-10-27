@@ -83,8 +83,8 @@
   <div class="control-panel">
 
     <div class="color-buttons">
-      <button class="color-button" id="cButton">Derinlik</button>
-      <button class="color-button" id="zButton">Sinyal</button>
+      <button class="color-button" id="cButton">Sinyal</button>
+      <button class="color-button" id="zButton">Derinlik</button>
       <button class="color-button" id="show2DButton">2D Görünüm Göster</button>
       <div class="camera-controls">
         <label for="cameraX">Kamera X: <span id="cameraXValue">1.5</span></label>
@@ -156,11 +156,11 @@
         z.push(
           xRange.map((xVal) => {
             const point = data.find((p) => p.x === xVal && p.y === yVal);
-            
-              return point && !isNaN(point.c) ? Math.floor(point.c) : 0;
-            
-              
-            
+
+            return point.c.toFixed(10);
+
+
+
           })
         );
       });
@@ -279,8 +279,8 @@
 
           if (pointsInGrid.length > 0) {
             const avgValue = selectedDataType === 'z'
-              ? Math.floor(pointsInGrid.reduce((sum, point) => sum + (!isNaN(point.z) ? point.z : 0), 0) / pointsInGrid.length)
-              : Math.floor(pointsInGrid.reduce((sum, point) => sum + (!isNaN(point.c) ? point.c : 0), 0) / pointsInGrid.length);
+              ? Math.floor((pointsInGrid.reduce((sum, point) => sum + (!isNaN(point.z) ? point.z : 0), 0) / pointsInGrid.length))
+              : (pointsInGrid.reduce((sum, point) => sum + (!isNaN(point.c) ? parseFloat(point.c.toFixed(2)) : 0), 0) / pointsInGrid.length).toFixed(2);
 
             annotations.push({
               x: (xStart + xEnd) / 2,
@@ -303,7 +303,7 @@
         const cRow = [];
         y.forEach((yVal) => {
           const point = data.find((p) => p.x === yVal && p.y === xVal);
-          cRow.push(point ? Math.floor(!isNaN(point.c) ? point.c : 0) : 0);
+          cRow.push(point.c.toFixed(10));
         });
         z.push(cRow);
       });

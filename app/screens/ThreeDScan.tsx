@@ -3,7 +3,9 @@ import { Text, View, TouchableOpacity, Alert, Modal, TextInput } from "react-nat
 import WebView from "react-native-webview";
 import { Audio } from 'expo-av';  // Ses çalma kütüphanesi
 import { useBluetooth } from "../context/BluetoothContext";
-import RNFS from "react-native-fs"
+
+
+
 interface ThreeDScanProps {
   route: any;
   navigation: any;
@@ -32,31 +34,31 @@ export function ThreeDScan({ route, navigation }: ThreeDScanProps) {
   const [Vref, setVref] = useState<number | null>(null);
 
   // Beep sesini çalmak için fonksiyon
- 
-const playBeepSound = async () => {
-  const { sound } = await Audio.Sound.createAsync(
-    require('../../assets/beep.mp3')  // Ses dosyasının yolu
-  );
-  
-  // Sesi sadece belirli bir süre çalalım, örneğin 500 ms'den başlasın ve 1 saniye çalsın
-  setSound(sound);
 
-  // 500 milisaniyeden başla ve 1 saniye çal
-  await sound.playFromPositionAsync(500);  // Başlangıç pozisyonu (milisaniye cinsinden)
-  
-  // 1 saniye sonra durdurmak için timeout ayarlayalım
-  setTimeout(() => {
-    sound.stopAsync();
-  }, 100);  // 1 saniye (1000 milisaniye)
-};
+  const playBeepSound = async () => {
+    const { sound } = await Audio.Sound.createAsync(
+      require('../../assets/beep.mp3')  // Ses dosyasının yolu
+    );
 
-useEffect(() => {
-  return sound
-    ? () => {
+    // Sesi sadece belirli bir süre çalalım, örneğin 500 ms'den başlasın ve 1 saniye çalsın
+    setSound(sound);
+
+    // 500 milisaniyeden başla ve 1 saniye çal
+    await sound.playFromPositionAsync(500);  // Başlangıç pozisyonu (milisaniye cinsinden)
+
+    // 1 saniye sonra durdurmak için timeout ayarlayalım
+    setTimeout(() => {
+      sound.stopAsync();
+    }, 100);  // 1 saniye (1000 milisaniye)
+  };
+
+  useEffect(() => {
+    return sound
+      ? () => {
         sound.unloadAsync();  // Bileşen kapanınca sesi serbest bırak
       }
-    : undefined;
-}, [sound]);
+      : undefined;
+  }, [sound]);
 
   const createData = (rows: number, cols: number) => {
     const step = 30;
@@ -85,37 +87,44 @@ useEffect(() => {
 
   const saveToCSV = async () => {
     if (CSVData) {
-      // CSV başlıklarını ekleyelim
-      const header = "x,y,z,c\n";
-      const csvContent = CSVData.map(
-        (data) => `${data.x},${data.y},${data.z},${data.c}`
-      ).join("\n");
-      const completeContent = header + csvContent;
-
+      // Her sütun için başlıklar ve satırları sadece o sütunun değerleri olacak şekilde ayarlayalım
+      const xColumn = ["X", ...CSVData.map((data) => data.x)];
+      const yColumn = ["Y", ...CSVData.map((data) => data.y)];
+      const zColumn = ["Z", ...CSVData.map((data) => data.z)];
+      const cColumn = ["C", ...CSVData.map((data) => data.c)];
+  
+      // Her satırı oluşturalım: Aynı sıradaki X, Y, Z, C değerlerini virgülle ayıralım
+      const csvContent = xColumn.map((_, i) => `${xColumn[i]},${yColumn[i]},${zColumn[i]},${cColumn[i]}`).join("\n");
+  
       const directoryPath = RNFS.DownloadDirectoryPath;
-
+  
       try {
         // Klasörün var olup olmadığını kontrol edin, yoksa oluşturun
         const dirExists = await RNFS.exists(directoryPath);
         if (!dirExists) {
           await RNFS.mkdir(directoryPath);
         }
-
-        const finalFileName = fileName ? fileName : `Deep3D_${getFormattedDate()}.csv`;
-        const path = `${directoryPath}/${finalFileName}.csv`;
-
-        await RNFS.writeFile(path, completeContent, "utf8");
+  
+        // Dosya adı oluşturulması
+        const finalFileName = fileName ? fileName : `VoxlerData_${getFormattedDate()}.csv`;
+        const path = `${directoryPath}/${finalFileName}`;
+  
+        // Dosyayı oluşturup içeriği yazma
+        await RNFS.writeFile(path, csvContent, "utf8");
         Alert.alert(
           "Başarılı",
-          `Veri ${finalFileName}.csv adıyla ${directoryPath} klasörüne kaydedildi.`
+          `Veri ${finalFileName} adıyla ${directoryPath} klasörüne kaydedildi.`
         );
       } catch (error) {
         Alert.alert("Hata", "Veri kaydedilirken bir hata oluştu.");
       }
     }
   };
+  
 
   const getData: any = async () => {
+    /*const randomValue = Math.floor(Math.random() * 301); // 0 ile 300 arasında rastgele sayı üret
+    return randomValue; */
     if (connectedDevice) {
       try {
         await connectedDevice.write("M");
@@ -129,15 +138,15 @@ useEffect(() => {
   };
 
   const calculateCValue = (zRawValue: number) => {
-    const sensitivity = 1.1;  
+    const sensitivity = 1.1;
 
     if (Vref === null) {
-      return 0; 
+      return 0;
     }
 
-    const voltage = (zRawValue / 1023) * 5; 
-    const cValue = (voltage - Vref) / sensitivity;  
-    return parseFloat(cValue.toFixed(3)); 
+    const voltage = (zRawValue / 1023) * 5;
+    const cValue = (voltage - Vref) / sensitivity;
+    return parseFloat(cValue.toFixed(3));
   };
 
 
@@ -147,14 +156,14 @@ useEffect(() => {
 
     if (CSVData && currentIndex < CSVData.length) {
       const newData = [...CSVData];
-      const zRawValue = await getData();  
+      const zRawValue = await getData();
 
       if (Vref === null) {
         if (zRawValue === null || isNaN(zRawValue)) {
-            setVref(0);  // Eğer geçersiz bir değer varsa, işlemi durdur
+          setVref(0);  // Eğer geçersiz bir değer varsa, işlemi durdur
         } else {
-            // Geçerli Z değeri varsa Vref hesapla
-            setVref((zRawValue / 1023) * 5);
+          // Geçerli Z değeri varsa Vref hesapla
+          setVref((zRawValue / 1023) * 5);
         }
       }
       const cValue = calculateCValue(zRawValue);
@@ -164,8 +173,8 @@ useEffect(() => {
           Math.floor(currentIndex / rowLength) % 2 === 0
             ? currentIndex
             : Math.floor(currentIndex / rowLength) * rowLength +
-              (rowLength - 1) -
-              (currentIndex % rowLength);
+            (rowLength - 1) -
+            (currentIndex % rowLength);
         newData[zigzagIndex].z = zRawValue;
         newData[zigzagIndex].c = cValue;
       } else {
