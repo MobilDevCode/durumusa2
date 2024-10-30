@@ -37,18 +37,18 @@ export function Files() {
                 acc[key.trim().toLowerCase()] = row[key];
                 return acc;
               }, {});
-      
+
               const { x, y, z, c } = keys;
-              
+
               // z ve c değerlerinin olup olmadığını kontrol et
               const zExists = z !== undefined && !isNaN(parseFloat(z));
               const cExists = c !== undefined && !isNaN(parseFloat(c));
-              
+
               if (x !== undefined && y !== undefined) {
-                return { 
-                  x: parseFloat(x), 
-                  y: parseFloat(y), 
-                  z: zExists ? parseFloat(z) : null, 
+                return {
+                  x: parseFloat(x),
+                  y: parseFloat(y),
+                  z: zExists ? parseFloat(z) : null,
                   c: cExists ? parseFloat(c) : null,
                   zExists, // true veya false olarak kaydet
                   cExists  // true veya false olarak kaydet
@@ -57,7 +57,7 @@ export function Files() {
               return null;
             })
             .filter((row: any) => row !== null);
-      
+
           if (data.length > 0) {
             SetCSVData(data);
           } else {
@@ -71,7 +71,7 @@ export function Files() {
           console.error("CSV parse hatası:", err);
         },
       });
-      
+
     } catch (err) {
       console.error("Dosya seçimi hatası:", err);
     }
@@ -93,29 +93,29 @@ export function Files() {
     }
   }, [CSVData]);
 
-  
+
   return (
     <View style={{ flex: 1, backgroundColor: "#FFF" }}>
- <WebView
-  ref={WebViewRef}
-  style={{ flex: 1 }}
-  originWhitelist={["*"]}
-  source={require('../../surface.html')}
-  javaScriptEnabled={true}
-  domStorageEnabled={true}
-  allowFileAccess={true}
-  allowUniversalAccessFromFileURLs={true}
-  mixedContentMode="compatibility"
-  startInLoadingState={true}
-  renderLoading={() => <ActivityIndicator size="large" color="#0000ff" />}
-  cacheEnabled={false}
-  setLayerType={Platform.OS === "android" ? "software" : "hardware"}
-  onLoadEnd={() => {
-    if (CSVData) {
-      WebViewRef.current.postMessage(JSON.stringify({ values: CSVData}));
-    }
-  }}
-/>
+      <WebView
+        ref={WebViewRef}
+        style={{ flex: 1 }}
+        originWhitelist={["*"]}
+        source={require('../../surface.html')}
+        javaScriptEnabled={true}
+        domStorageEnabled={true}
+        allowFileAccess={true}
+        allowUniversalAccessFromFileURLs={true}
+        mixedContentMode="compatibility"
+        startInLoadingState={true}
+        renderLoading={() => <ActivityIndicator size="large" color="#0000ff" />}
+        cacheEnabled={false}
+        setLayerType={Platform.OS === "android" ? "software" : "hardware"}
+        onLoadEnd={() => {
+          if (CSVData) {
+            WebViewRef.current.postMessage(JSON.stringify({ values: CSVData }));
+          }
+        }}
+      />
 
 
       <TouchableOpacity

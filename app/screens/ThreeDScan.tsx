@@ -87,45 +87,44 @@ export function ThreeDScan({ route, navigation }: ThreeDScanProps) {
 
   const saveToCSV = async () => {
     if (CSVData) {
-      // Her sütun için başlıklar ve satırları sadece o sütunun değerleri olacak şekilde ayarlayalım
-      const xColumn = ["X", ...CSVData.map((data) => data.x)];
-      const yColumn = ["Y", ...CSVData.map((data) => data.y)];
-      const zColumn = ["Z", ...CSVData.map((data) => data.z)];
-      const cColumn = ["C", ...CSVData.map((data) => data.c)];
-  
-      // Her satırı oluşturalım: Aynı sıradaki X, Y, Z, C değerlerini virgülle ayıralım
-      const csvContent = xColumn.map((_, i) => `${xColumn[i]},${yColumn[i]},${zColumn[i]},${cColumn[i]}`).join("\n");
-  
+      // CSV başlıklarını ekleyelim
+      const header = "x,y,z,c\n";
+      const csvContent = CSVData.map(
+        (data) => `${data.x},${data.y},${data.z},${data.c}`
+      ).join("\n");
+      console.log(csvContent);
+      const completeContent = header + csvContent;
+
       const directoryPath = RNFS.DownloadDirectoryPath;
-  
+
       try {
         // Klasörün var olup olmadığını kontrol edin, yoksa oluşturun
         const dirExists = await RNFS.exists(directoryPath);
         if (!dirExists) {
           await RNFS.mkdir(directoryPath);
         }
-  
-        // Dosya adı oluşturulması
-        const finalFileName = fileName ? fileName : `VoxlerData_${getFormattedDate()}.csv`;
+
+        const finalFileName = fileName ? fileName : `Deep3D_${getFormattedDate()}.csv`;
         const path = `${directoryPath}/${finalFileName}`;
-  
-        // Dosyayı oluşturup içeriği yazma
-        await RNFS.writeFile(path, csvContent, "utf8");
+
+        await RNFS.writeFile(path, completeContent, "utf8");
         Alert.alert(
           "Başarılı",
-          `Veri ${finalFileName} adıyla ${directoryPath} klasörüne kaydedildi.`
+          `Veri ${finalFileName}.csv adıyla ${directoryPath} klasörüne kaydedildi.`
         );
       } catch (error) {
         Alert.alert("Hata", "Veri kaydedilirken bir hata oluştu.");
       }
     }
   };
-  
+
+
 
   const getData: any = async () => {
-    /*const randomValue = Math.floor(Math.random() * 301); // 0 ile 300 arasında rastgele sayı üret
-    return randomValue; */
-    if (connectedDevice) {
+    const randomValue = Math.floor(Math.random() * 301); // 0 ile 300 arasında rastgele sayı üret
+    console.log(randomValue);
+    return randomValue;
+    /*if (connectedDevice) {
       try {
         await connectedDevice.write("M");
         const response: any = await connectedDevice.read();
@@ -134,7 +133,7 @@ export function ThreeDScan({ route, navigation }: ThreeDScanProps) {
       } catch (e) {
         console.error("Komut gönderme hatası", e);
       }
-    }
+    }*/
   };
 
   const calculateCValue = (zRawValue: number) => {
@@ -224,7 +223,7 @@ export function ThreeDScan({ route, navigation }: ThreeDScanProps) {
         ref={WebViewRef}
         style={{ flex: 1 }}
         originWhitelist={["*"]}
-        source={{ uri: "file:///android_asset/scanmode.html" }}
+        source={require('../../scanmode.html')}
         javaScriptEnabled
         onLoadEnd={() => {
           createData(params.x, params.y);

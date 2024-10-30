@@ -238,50 +238,54 @@
     }
 
     function render2DContourWithGrid(data) {
-      const gridSize = Math.min(data.length, 20);
+      const xUnique = [...new Set(data.map(point => point.x))];
+      const yUnique = [...new Set(data.map(point => point.y))];
+      const gridSizeX = xUnique.length+1; // Artık +1 eklemiyoruz
+      const gridSizeY = yUnique.length+1; // Artık +1 eklemiyoruz
 
-      const xMin = Math.min(...data.map(point => point.x));
-      const xMax = Math.max(...data.map(point => point.x));
-      const yMin = Math.min(...data.map(point => point.y));
-      const yMax = Math.max(...data.map(point => point.y));
+      const xMin = Math.min(...xUnique);
+      const xMax = Math.max(...xUnique);
+      const yMin = Math.min(...yUnique);
+      const yMax = Math.max(...yUnique);
 
-      const xStep = (xMax - xMin) / gridSize;
-      const yStep = (yMax - yMin) / gridSize;
+      const xStep = (xMax - xMin) / (gridSizeX - 1);
+      const yStep = (yMax - yMin) / (gridSizeY - 1);
 
       const gridLines = {
         x: [], y: [], mode: 'lines', type: 'scatter',
         line: { color: 'black', width: 2 }
       };
 
-      for (let i = 0; i <= gridSize; i++) {
+      // Her bir x ve y adımında bir çizgi ekle
+      for (let i = 0; i < gridSizeX; i++) {
         const xVal = xMin + i * xStep;
-        const yVal = yMin + i * yStep;
-
         gridLines.x.push(xVal, xVal, null);
         gridLines.y.push(yMin, yMax, null);
+      }
 
+      for (let j = 0; j < gridSizeY; j++) {
+        const yVal = yMin + j * yStep;
         gridLines.x.push(xMin, xMax, null);
         gridLines.y.push(yVal, yVal, null);
       }
 
       const annotations = [];
-      for (let i = 0; i < gridSize; i++) {
-        for (let j = 0; j < gridSize; j++) {
+      for (let i = 0; i < gridSizeX; i++) {
+        for (let j = 0; j < gridSizeY; j++) {
           const xStart = xMin + i * xStep;
           const xEnd = xMin + (i + 1) * xStep;
           const yStart = yMin + j * yStep;
           const yEnd = yMin + (j + 1) * yStep;
 
           const pointsInGrid = data.filter(point =>
-            point.x >= xStart && point.x < xEnd &&
-            point.y >= yStart && point.y < yEnd
+            point.x >= xStart && point.x <= xEnd &&
+            point.y >= yStart && point.y <= yEnd
           );
 
           if (pointsInGrid.length > 0) {
             const avgValue = selectedDataType === 'z'
               ? Math.floor((pointsInGrid.reduce((sum, point) => sum + (!isNaN(point.z) ? point.z : 0), 0) / pointsInGrid.length))
               : (pointsInGrid.reduce((sum, point) => sum + (!isNaN(point.c) ? parseFloat(point.c.toFixed(2)) : 0), 0) / pointsInGrid.length).toFixed(2);
-
             annotations.push({
               x: (xStart + xEnd) / 2,
               y: (yStart + yEnd) / 2,
@@ -295,20 +299,20 @@
         }
       }
 
-      const x = [...new Set(data.map(point => point.y))];  // Y'yi X'e alıyoruz
-      const y = [...new Set(data.map(point => point.x))];  // X'i Y'ye alıyoruz
+      const x = yUnique;
+      const y = xUnique;
       const z = [];
 
       x.forEach((xVal) => {
         const cRow = [];
         y.forEach((yVal) => {
           const point = data.find((p) => p.x === yVal && p.y === xVal);
-          cRow.push(point.c.toFixed(10));
+          cRow.push(point ? parseFloat(point.c.toFixed(10)) : 0);
         });
         z.push(cRow);
       });
 
-
+      // `trace` oluşturma ve `Plotly.react` ile çizim
       const trace = {
         x: x,
         y: y,
@@ -339,7 +343,7 @@
           displayModeBar: false,
         }
       );
-    }
+}
 
     let isZEnabled = false;
     let isCEnabled = false;
