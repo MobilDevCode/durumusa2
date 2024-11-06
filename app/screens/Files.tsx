@@ -100,7 +100,7 @@ export function Files() {
         ref={WebViewRef}
         style={{ flex: 1 }}
         originWhitelist={["*"]}
-        source={require('../../surface.html')}
+        source={{ uri: "file:///android_asset/surface.html" }}
         javaScriptEnabled={true}
         domStorageEnabled={true}
         allowFileAccess={true}

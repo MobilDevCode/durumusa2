@@ -3,7 +3,7 @@ import { Text, View, TouchableOpacity, Alert, Modal, TextInput } from "react-nat
 import WebView from "react-native-webview";
 import { Audio } from 'expo-av';  // Ses çalma kütüphanesi
 import { useBluetooth } from "../context/BluetoothContext";
-
+import RNFS from "react-native-fs";
 
 
 interface ThreeDScanProps {
@@ -121,10 +121,10 @@ export function ThreeDScan({ route, navigation }: ThreeDScanProps) {
 
 
   const getData: any = async () => {
-    const randomValue = Math.floor(Math.random() * 301); // 0 ile 300 arasında rastgele sayı üret
+    /*const randomValue = Math.floor(Math.random() * 301); // 0 ile 300 arasında rastgele sayı üret
     console.log(randomValue);
-    return randomValue;
-    /*if (connectedDevice) {
+    return randomValue;*/
+    if (connectedDevice) {
       try {
         await connectedDevice.write("M");
         const response: any = await connectedDevice.read();
@@ -133,7 +133,7 @@ export function ThreeDScan({ route, navigation }: ThreeDScanProps) {
       } catch (e) {
         console.error("Komut gönderme hatası", e);
       }
-    }*/
+    }
   };
 
   const calculateCValue = (zRawValue: number) => {
@@ -223,7 +223,7 @@ export function ThreeDScan({ route, navigation }: ThreeDScanProps) {
         ref={WebViewRef}
         style={{ flex: 1 }}
         originWhitelist={["*"]}
-        source={require('../../scanmode.html')}
+        source={{ uri: "file:///android_asset/scanmode.html" }}
         javaScriptEnabled
         onLoadEnd={() => {
           createData(params.x, params.y);
